@@ -45,6 +45,7 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
     this.temperature = 0;
 
     this.mqttClient = mqtt.connect(this.mqttHost);
+    this.mqttClient.on('connect', this.mqttConectionCallback.bind(this))
     this.mqttClient.on('message', function (topic, message) {
       log.info('mqtt topic: ' + topic);
       log.info('mqtt message: ' + message.toString());
@@ -59,6 +60,10 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
     this.informationService = new hap.Service.AccessoryInformation()
       .setCharacteristic(hap.Characteristic.Manufacturer, "Custom Manufacturer")
       .setCharacteristic(hap.Characteristic.Model, "Custom Model");
+  }
+
+  mqttConectionCallback() {
+    this.mqttClient.subscribe('#');
   }
 
   getServices(): Service[] {
