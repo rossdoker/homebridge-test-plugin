@@ -34,6 +34,9 @@ class ExampleSwitch implements AccessoryPlugin {
     this.log = log;
     this.name = config.name;
 
+    log.info('------------name: ' + config.name);
+    log.info('------------aaaa: ' + config.aaa);
+
     this.switchService = new hap.Service.Switch(this.name);
     this.switchService.getCharacteristic(hap.Characteristic.On)
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
