@@ -24,6 +24,7 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
   private readonly log: Logging;
   private readonly name: string;
   private readonly topic: string;
+  private readonly valueName: string;
   private readonly mqttHost: string;
 
   private sensorValue: number;
@@ -39,9 +40,8 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
 
     this.log = log;
     this.name = config.name;
-    log.info(JSON.stringify(config));
-    log.info(config.topic);
     this.topic = config.topic;
+    this.valueName = config.valueName;
     this.mqttHost = config.mqttHost || 'mqtt://localhost';
 
     this.sensorValue = 0;
@@ -59,9 +59,22 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
         log.error('Topic is not defined!');
       }
     });
-    this.mqttClient.on('message', function (topic, message) {
+    this.mqttClient.on('message', (topic, message) => {
+      if (this.valueName) {
+        const data = JSON.parse(message.toString());
+        const value = data[this.valueName];
+        if (value && typeof value === 'number') {
+          this.sensorValue = value; 
+        } else {
+          // error message if value name is not defined in config
+          log.error('Bad value: ' + value);
+        }
+      } else {
+        // error message if value name is not defined in config
+        log.error('Value name is not defined!');
+      }
       log.info('mqtt topic: ' + topic);
-      log.info('mqtt message: ' + message.toString());
+      log.info('mqtt message: ' + message.);
     })
 
     this.accessoryService = new hap.Service.TemperatureSensor(this.name);
