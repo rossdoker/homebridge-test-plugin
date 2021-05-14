@@ -6,6 +6,7 @@ import {
   CharacteristicGetCallback,
   CharacteristicSetCallback,
   CharacteristicValue,
+  Characteristic,
   HAP,
   Logging,
   Service
@@ -25,9 +26,11 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
   private readonly name: string;
   private readonly topic: string;
   private readonly valueName: string;
+  private readonly batteryStatusValueName: string;
   private readonly mqttHost: string;
 
   private sensorValue: number;
+  private batteryValue: number;
 
   private readonly mqttClient: mqtt.Client;
 
@@ -42,9 +45,11 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
     this.name = config.name;
     this.topic = config.topic;
     this.valueName = config.valueName;
+    this.batteryStatusValueName = config.batteryStatusValueName;
     this.mqttHost = config.mqttHost || 'mqtt://localhost';
 
     this.sensorValue = 0;
+    this.batteryValue = Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
 
     // connect to mqtt server
     this.mqttClient = mqtt.connect(this.mqttHost);
@@ -60,28 +65,52 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
       }
     });
     this.mqttClient.on('message', (topic, message) => {
+      // read value
       if (this.valueName) {
         const data = JSON.parse(message.toString());
         const value = data[this.valueName];
         if (value && typeof value === 'number') {
           this.sensorValue = value; 
         } else {
-          // error message if value name is not defined in config
+          // error message if value is invalid
           log.error('Bad value: ' + value);
         }
       } else {
         // error message if value name is not defined in config
         log.error('Value name is not defined!');
       }
+
+      // read battery if needed
+      if (this.batteryStatusValueName) {
+        const data = JSON.parse(message.toString());
+        const batteryValue = 10;
+        // const batteryValue = data[this.batteryStatusValueName];
+        if (batteryValue && typeof batteryValue === 'number') {
+          this.batteryValue = batteryValue <= 15 ? Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW : Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL; 
+        } else {
+          // error message if value is invalid
+          log.error('Bad value: ' + batteryValue);
+        }
+      }
+
+
       log.info('mqtt topic: ' + topic);
       log.info('mqtt message: ' + message.toString());
     })
 
     this.accessoryService = new hap.Service.TemperatureSensor(this.name);
+
     this.accessoryService.getCharacteristic(hap.Characteristic.CurrentTemperature)
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
         callback(undefined, this.sensorValue);
       })
+      
+    if (this.batteryStatusValueName) {
+      this.accessoryService.getCharacteristic(hap.Characteristic.StatusLowBattery)
+        .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
+          callback(undefined, this.batteryValue);
+        })
+    }
 
     this.informationService = new hap.Service.AccessoryInformation()
       .setCharacteristic(hap.Characteristic.Manufacturer, "Custom Manufacturer")
