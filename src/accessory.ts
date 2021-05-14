@@ -54,9 +54,10 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
         this.mqttClient.subscribe(this.topic, (err) => {
           if (err) log.error(err.message);
         });
+      } else {
+        // error message if topic is not defined in config
+        log.error('Topic is not defined!');
       }
-      // error message if topic is not defined in config
-      log.error('Topic is not defined!');
     });
     this.mqttClient.on('message', function (topic, message) {
       log.info('mqtt topic: ' + topic);
