@@ -39,6 +39,8 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
 
     this.log = log;
     this.name = config.name;
+    log.info(JSON.stringify(config));
+    log.info(config.topic);
     this.topic = config.topic;
     this.mqttHost = config.mqttHost || 'mqtt://localhost';
 
