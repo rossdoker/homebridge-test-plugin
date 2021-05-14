@@ -74,7 +74,7 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
         log.error('Value name is not defined!');
       }
       log.info('mqtt topic: ' + topic);
-      log.info('mqtt message: ' + message.);
+      log.info('mqtt message: ' + message.toString());
     })
 
     this.accessoryService = new hap.Service.TemperatureSensor(this.name);
