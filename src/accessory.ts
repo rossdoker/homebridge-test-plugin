@@ -39,8 +39,6 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
 
   constructor(log: Logging, config: AccessoryConfig, api: API) {
 
-    // log.info('config: ' + JSON.stringify(config));
-
     this.log = log;
     this.name = config.name;
     this.topic = config.topic;
@@ -83,8 +81,7 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
       // read battery if needed
       if (this.batteryStatusValueName) {
         const data = JSON.parse(message.toString());
-        const batteryValue = 10;
-        // const batteryValue = data[this.batteryStatusValueName];
+        const batteryValue = data[this.batteryStatusValueName];
         if (batteryValue && typeof batteryValue === 'number') {
           this.batteryValue = batteryValue <= 15 ? Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW : Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL; 
         } else {
@@ -92,10 +89,6 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
           log.error('Bad value: ' + batteryValue);
         }
       }
-
-
-      log.info('mqtt topic: ' + topic);
-      log.info('mqtt message: ' + message.toString());
     })
 
     this.accessoryService = new hap.Service.TemperatureSensor(this.name);
@@ -104,7 +97,7 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
         callback(undefined, this.sensorValue);
       })
-      
+
     if (this.batteryStatusValueName) {
       this.accessoryService.getCharacteristic(hap.Characteristic.StatusLowBattery)
         .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
