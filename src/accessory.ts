@@ -26,7 +26,7 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
   private readonly topic: string;
   private readonly mqttHost: string;
 
-  private temperature: number;
+  private sensorValue: number;
 
   private readonly mqttClient: mqtt.Client;
 
@@ -42,10 +42,20 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
     this.topic = config.topic;
     this.mqttHost = config.mqttHost || 'mqtt://localhost';
 
-    this.temperature = 0;
+    this.sensorValue = 0;
 
+    // connect to mqtt server
     this.mqttClient = mqtt.connect(this.mqttHost);
-    this.mqttClient.on('connect', this.mqttConectionCallback.bind(this))
+    this.mqttClient.on('connect', () => {
+      // subscribe to topic
+      if (this.topic) {
+        this.mqttClient.subscribe(this.topic, (err) => {
+          if (err) log.error(err.message);
+        });
+      }
+      // error message if topic is not defined in config
+      log.error('Topic is not defined!');
+    });
     this.mqttClient.on('message', function (topic, message) {
       log.info('mqtt topic: ' + topic);
       log.info('mqtt message: ' + message.toString());
@@ -54,16 +64,12 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
     this.accessoryService = new hap.Service.TemperatureSensor(this.name);
     this.accessoryService.getCharacteristic(hap.Characteristic.CurrentTemperature)
       .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
-        callback(undefined, this.temperature);
+        callback(undefined, this.sensorValue);
       })
 
     this.informationService = new hap.Service.AccessoryInformation()
       .setCharacteristic(hap.Characteristic.Manufacturer, "Custom Manufacturer")
       .setCharacteristic(hap.Characteristic.Model, "Custom Model");
-  }
-
-  mqttConectionCallback() {
-    this.mqttClient.subscribe('#');
   }
 
   getServices(): Service[] {
