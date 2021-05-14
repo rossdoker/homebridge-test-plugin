@@ -17,10 +17,10 @@ let hap: HAP;
 
 export = (api: API) => {
   hap = api.hap;
-  api.registerAccessory("ExampleTemperatureSensorAccessory", ExampleTemperatureSensorAccessory);
+  api.registerAccessory("MQTTSensor", MQTTSensorAccessory);
 };
 
-class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
+class MQTTSensorAccessory implements AccessoryPlugin {
 
   private readonly log: Logging;
   private readonly name: string;
@@ -28,6 +28,7 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
   private readonly valueName: string;
   private readonly batteryStatusValueName: string;
   private readonly mqttHost: string;
+  private readonly sensorType: string;
 
   private sensorValue: number;
   private batteryValue: number;
@@ -44,6 +45,7 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
     this.topic = config.topic;
     this.valueName = config.valueName;
     this.batteryStatusValueName = config.batteryStatusValueName;
+    this.sensorType = config.sensorType;
     this.mqttHost = config.mqttHost || 'mqtt://localhost';
 
     this.sensorValue = 0;
@@ -68,7 +70,7 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
         const data = JSON.parse(message.toString());
         const value = data[this.valueName];
         if (value && typeof value === 'number') {
-          this.sensorValue = value; 
+          this.sensorValue = value;
         } else {
           // error message if value is invalid
           log.error('Bad value: ' + value);
@@ -83,7 +85,7 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
         const data = JSON.parse(message.toString());
         const batteryValue = data[this.batteryStatusValueName];
         if (batteryValue && typeof batteryValue === 'number') {
-          this.batteryValue = batteryValue <= 15 ? Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW : Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL; 
+          this.batteryValue = batteryValue <= 15 ? Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW : Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
         } else {
           // error message if value is invalid
           log.error('Bad value: ' + batteryValue);
@@ -91,18 +93,27 @@ class ExampleTemperatureSensorAccessory implements AccessoryPlugin {
       }
     })
 
-    this.accessoryService = new hap.Service.TemperatureSensor(this.name);
+    this.accessoryService = new hap.Service.HumiditySensor(this.name);
 
-    this.accessoryService.getCharacteristic(hap.Characteristic.CurrentTemperature)
-      .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
-        callback(undefined, this.sensorValue);
-      })
-
-    if (this.batteryStatusValueName) {
-      this.accessoryService.getCharacteristic(hap.Characteristic.StatusLowBattery)
+    if (
+      this.sensorType === 'humidity' ||
+      this.sensorType === 'temperature'
+    ) {
+      if (this.sensorType === 'humidity') {
+        this.accessoryService = new hap.Service.HumiditySensor(this.name);
+        this.accessoryService.getCharacteristic(hap.Characteristic.CurrentRelativeHumidity)
         .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
-          callback(undefined, this.batteryValue);
+          callback(undefined, this.sensorValue);
         })
+      } else if (this.sensorType === 'temperature') {
+        this.accessoryService = new hap.Service.TemperatureSensor(this.name);
+        this.accessoryService.getCharacteristic(hap.Characteristic.CurrentTemperature)
+        .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
+          callback(undefined, this.sensorValue);
+        })
+      }
+    } else {
+      log.error('Unsupported sensor type!');
     }
 
     this.informationService = new hap.Service.AccessoryInformation()
